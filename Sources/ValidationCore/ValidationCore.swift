@@ -55,12 +55,13 @@ public struct ValidationCore {
             completionHandler(.failure(.COSE_DESERIALIZATION_FAILED))
             return
         }
-        trustlistService.key(for: keyId, keyType: cwt.euHealthCert.type) { result in
-            switch result {
-            case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)))
-            case .failure(let error): completionHandler(.failure(error))
-            }
-        }
+        completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)
+        // trustlistService.key(for: keyId, keyType: cwt.euHealthCert.type) { result in
+        //     switch result {
+        //     case .success(let key): completionHandler(.success(ValidationResult(isValid: cose.hasValidSignature(for: key), payload: cwt.euHealthCert)))
+        //     case .failure(let error): completionHandler(.failure(error))
+        //     }
+        // }
     }
 
     public func updateTrustlist(completionHandler: @escaping (ValidationError?)->()) {
