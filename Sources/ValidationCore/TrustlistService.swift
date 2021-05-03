@@ -116,6 +116,7 @@ class TrustlistService {
             CryptoService.decrypt(ciphertext: trustlistData, with: TRUSTLIST_KEY_ALIAS) { result in
                 switch result {
                 case .success(let plaintext):
+                    print(plaintext)
                     if let trustlist = try? JSONDecoder().decode(TrustList.self, from: plaintext),
                        trustlist.isValid() {
                         self.cachedTrustlist = trustlist
