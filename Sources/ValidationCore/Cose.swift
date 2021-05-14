@@ -30,7 +30,7 @@ struct Cose {
         }
     }
     
-   private var signatureStruct : Data? {
+    private var signatureStruct : Data? {
         get {
             guard let header = protectedHeader.rawHeader else {
                 return nil
@@ -51,17 +51,34 @@ struct Cose {
     }
     
     init?(from data: Data) {
-        guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
-              let type = CoseType.from(tag: cose.0),
-              let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
-              let signature = cose.1[3].asBytes() else {
-            return nil
+        let type = CoseType.from(data: data)
+        
+        switch type {
+        case .sign1:
+            guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose(),
+                  let protectedHeader = CoseHeader(fromBytestring: cose.1[0]),
+                  let signature = cose.1[3].asBytes(),
+                  let type = type else {
+                return nil
+            }
+            self.type = type
+            self.protectedHeader = protectedHeader
+            self.unprotectedHeader = CoseHeader(from: cose.1[1])
+            self.payload = cose.1[2]
+            self.signature = Data(signature)
+        default: /* Process untagged COSE, based on https://github.com/ehn-digital-green-development/ValidationCore/issues/3 */
+            guard let coseData = try? CBOR.decode(data.bytes),
+                  let coseList = coseData.asList(),
+                  let protectedHeader = CoseHeader(fromBytestring: coseList[0]),
+                  let signature = coseList[3].asBytes() else {
+                return nil
+            }
+            self.protectedHeader = protectedHeader
+            self.unprotectedHeader = CoseHeader(fromBytestring: coseList[1]) ?? nil
+            self.payload = coseList[2]
+            self.signature = Data(signature)
+            self.type = .sign1
         }
-        self.type = type
-        self.protectedHeader = protectedHeader
-        self.unprotectedHeader = CoseHeader(from: cose.1[1])
-        self.payload = cose.1[2]
-        self.signature = Data(signature)
     }
     
     func hasValidSignature(for publicKey: SecKey) -> Bool {
@@ -151,8 +168,11 @@ struct Cose {
         case sign1 = "Signature1"
         case sign = "Signature"
         
-        static func from(tag: CBOR.Tag) -> CoseType? {
-            switch tag {
+        static func from(data: Data) -> CoseType? {
+            guard let cose = try? CBORDecoder(input: data.bytes).decodeItem()?.asCose() else {
+                return nil
+            }
+            switch cose.0 {
             case .coseSign1Item: return .sign1
             case .coseSignItem: return .sign
             default:
