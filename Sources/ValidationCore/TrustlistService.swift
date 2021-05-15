@@ -11,8 +11,8 @@ import CocoaLumberjackSwift
 import Security
 
 class TrustlistService {
-    private let CERT_SERVICE_URL = "https://dgc.a-sit.at/ehn/"
-    private let TRUST_LIST_PATH = "cert/list"
+    private let CERT_SERVICE_URL = "https://dgc.idsec.se/"
+    private let TRUST_LIST_PATH = "tp/trust-list"
     private let TRUSTLIST_FILENAME = "trustlist"
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
     private var cachedTrustlist : TrustList
