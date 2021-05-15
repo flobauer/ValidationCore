@@ -16,8 +16,8 @@ public protocol TrustlistService {
 }
 
 class DefaultTrustlistService : TrustlistService {
-    private let CERT_SERVICE_URL = "https://dgc.idsec.se/"
-    private let TRUST_LIST_PATH = "tp/trust-list"
+    private let CERT_SERVICE_URL = "https://dgc.a-sit.at/ehn/"
+    private let TRUST_LIST_PATH = "cert/list"
     private let TRUSTLIST_FILENAME = "trustlist"
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
     private var cachedTrustlist : TrustList
@@ -89,25 +89,10 @@ class DefaultTrustlistService : TrustlistService {
     }
     
     private func refreshTrustlist(from data: Data) -> Bool {
-        
-        DDLogDebug(data)
-        guard let cose = Cose(from: data) else {
-            return false
-        }
-
-        DDLogDebug(cose)
-        
-        guard let cbor = cose.payload.decodeBytestring() else {
-            return false;
-        }
-        DDLogDebug(cbor)
-        
-        guard let trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: Data(cbor.encode())) else {
-            return false;
-        }
-        DDLogDebug(trustlist)
-
-        guard trustlist.isValid() else {
+        guard let cose = Cose(from: data),
+              let cbor = cose.payload.decodeBytestring(),
+              let trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: Data(cbor.encode())),
+              trustlist.isValid() else {
             return false
         }
         self.cachedTrustlist = trustlist
