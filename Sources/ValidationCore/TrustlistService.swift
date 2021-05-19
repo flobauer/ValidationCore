@@ -22,6 +22,16 @@ class DefaultTrustlistService : TrustlistService {
     private let TRUSTLIST_KEY_ALIAS = "trustlist_key"
     private var cachedTrustlist : TrustList
     private let fileStorage : FileStorage
+    private let trustlistAnchor = """
+    MIIBJTCBy6ADAgECAgUAwvEVkzAKBggqhkjOPQQDAjAQMQ4wDAYDVQQDDAVFQy1N
+    ZTAeFw0yMTA0MjMxMTI3NDhaFw0yMTA1MjMxMTI3NDhaMBAxDjAMBgNVBAMMBUVD
+    LU1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/OV5UfYrtE140ztF9jOgnux1
+    oyNO8Bss4377E/kDhp9EzFZdsgaztfT+wvA29b7rSb2EsHJrr8aQdn3/1ynte6MS
+    MBAwDgYDVR0PAQH/BAQDAgWgMAoGCCqGSM49BAMCA0kAMEYCIQC51XwstjIBH10S
+    N701EnxWGK3gIgPaUgBN+ljZAs76zQIhAODq4TJ2qAPpFc1FIUOvvlycGJ6QVxNX
+    EkhRcgdlVfUb
+    """.replacingOccurrences(of: "\n", with: "")
+ 
     
     init() {
         self.fileStorage = FileStorage()
@@ -88,8 +98,10 @@ class DefaultTrustlistService : TrustlistService {
         completionHandler(.success(secKey))
     }
     
-    private func refreshTrustlist(from data: Data) -> Bool {
+   private func refreshTrustlist(from data: Data) -> Bool {
         guard let cose = Cose(from: data),
+              let publicKey = trustAnchorKey(),
+              cose.hasValidSignature(for: publicKey),
               let cbor = cose.payload.decodeBytestring(),
               let trustlist = try? CodableCBORDecoder().decode(TrustList.self, from: Data(cbor.encode())),
               trustlist.isValid() else {
@@ -129,5 +141,14 @@ class DefaultTrustlistService : TrustlistService {
                 }
             }
         }
+    }
+    
+    private func trustAnchorKey() -> SecKey? {
+        guard let certData = Data(base64Encoded: trustlistAnchor),
+              let certificate = SecCertificateCreateWithData(nil, certData as CFData),
+              let secKey = SecCertificateCopyKey(certificate) else {
+            return nil
+        }
+        return secKey
     }
 }
